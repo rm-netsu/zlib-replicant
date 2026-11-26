@@ -1,0 +1,55 @@
+name: CI
+
+# The zlib-engine CI, moved into the package together with the engine and
+# its differential-testing infrastructure. It is fully self-contained:
+# every path below is package-local (`zig build` puts zcompress/zlegacy
+# into zig-out/bin, `binaries/build-references.sh` builds the official
+# reference wrappers into binaries/, scripts/ resolves both via
+# scripts/refenv.py), so it runs unchanged in this package's own
+# repository and in any checkout of the enclosing zlib-fingerprint repo
+# that keeps the package subtree.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: '0.16.0'
+      - name: Engine unit tests (golden vectors + C-core oracle adapters)
+        run: zig build test
+      - name: Release build (zcompress + zlegacy harness tools)
+        run: zig build -Doptimize=ReleaseFast
+      - name: Regression fixtures (engine goldens, official wrappers off)
+        run: python3 scripts/regression_check.py --skip-official
+
+  differential:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: '0.16.0'
+      - name: Build harness tools
+        run: zig build -Doptimize=ReleaseFast
+      - name: Build official zlib release wrappers (31 releases, 1.0.1-1.4)
+        run: bash binaries/build-references.sh
+      - name: Regression fixtures (incl. official wrappers)
+        run: python3 scripts/regression_check.py
+      - name: Streaming-API differential matrix
+        run: python3 scripts/stream_matrix.py stream --jobs $(nproc)
+      - name: Extended one-shot differential matrix
+        run: python3 scripts/stream_matrix.py oneshot --jobs $(nproc)
+      - name: Archive results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: differential-results
+          path: |
+            results/stream-matrix.json
+            results/oneshot-ext-results.json

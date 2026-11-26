@@ -1,0 +1,18 @@
+zig-out/
+.zig-cache/
+
+# Rebuilt tools and downloaded/generated artifacts of the reference-binary
+# infrastructure; keep the wrapper sources and the build script.
+binaries/*
+!binaries/README.md
+!binaries/*.sh
+!binaries/*.c
+binaries/vendor/
+
+# Rebuildable work dirs of the verification harnesses (unanchored root
+# .gitignore rules also cover these when the package sits in-repo).
+asan-work/
+build-options-work/
+*-journal.jsonl
+
+__pycache__/
