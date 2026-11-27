@@ -4,11 +4,12 @@
     .fingerprint = 0x5449255438bee91,
     .minimum_zig_version = "0.16.0",
     .paths = .{
-        // The lightweight dependency subset: engine only.
         "build.zig",
         "build.zig.zon",
         "src",
         "binaries",
+        "legacy",
+        "tools",
         "README.md",
     },
 }
