@@ -87,7 +87,17 @@ fn addLegacySources(b: *std.Build, module: *std.Build.Module) void {
     };
     for ([_][]const u8{ "a", "b", "c", "d" }) |class| {
         var flags: [symbols.len + 3][]const u8 = undefined;
-        flags[0] = b.fmt("-Ilegacy/vendor/{s}", .{class});
+        // The include path must be absolute. Raw -I flags are handed to
+        // clang verbatim, and clang resolves a relative include path
+        // against the cwd of the compiler process, which is the directory
+        // the *consumer* invoked `zig build` from — not this package's
+        // root. That works only when building this package standalone
+        // from its own directory (cwd == package root), and breaks for
+        // every fetched copy living in a package cache. On top of that, a
+        // relative -I that resolves nowhere makes bridge.c fall back to
+        // any system zlib.h (e.g. /usr/include/zlib.h on a dev machine),
+        // silently compiling the oracle against the wrong header.
+        flags[0] = b.fmt("-I{s}", .{b.pathFromRoot(b.fmt("legacy/vendor/{s}", .{class}))});
         flags[1] = b.fmt("-DZF_ENTRY=zf_legacy_{s}", .{class});
         flags[2] = "-O2";
         for (symbols, 0..) |symbol, i| {
